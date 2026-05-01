@@ -14,7 +14,10 @@ dist-ssr
 .vinxi
 .tanstack/**
 .nitro
+.vercel/
 *.local
+devserver.out
+devserver.err
 
 # Wrangler / Cloudflare
 .wrangler/

@@ -1,154 +1,201 @@
-import { TrendingUp, Info } from "lucide-react";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { TrendingUp } from "lucide-react";
+import type { DashboardSnapshot, RangeKey } from "@/lib/dashboard/types";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { formatMetricValue } from "@/lib/dashboard/format";
 
-const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const revenue = [120, 132, 138, 150, 162, 178, 184, 195, 208, 219, 232, 248];
-const profit = [50, 56, 58, 62, 66, 71, 73, 76, 80, 83, 86, 95];
+const periods: Array<{ key: RangeKey; label: string }> = [
+  { key: "3m", label: "3М" },
+  { key: "6m", label: "6М" },
+  { key: "12m", label: "12М" },
+];
 
-const periods = ["3M", "6M", "12M", "Custom"];
+type RevenueChartProps = {
+  snapshot: DashboardSnapshot;
+  range: RangeKey;
+  onRangeChange: (next: RangeKey) => void;
+};
 
-export function RevenueChart() {
-  const w = 800;
-  const h = 280;
-  const padX = 36;
-  const padY = 24;
-  const innerW = w - padX * 2;
-  const innerH = h - padY * 2;
+function LegendItem({ color, label, axis }: { color: string; label: string; axis: string }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card-elevated/55 px-3 py-1.5 text-xs text-muted-foreground">
+      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+      <span className="font-medium text-foreground">{label}</span>
+      <span className="text-muted-foreground/75">{axis}</span>
+    </div>
+  );
+}
 
-  const allValues = [...revenue, ...profit];
-  const max = Math.max(...allValues) * 1.1;
-  const min = 0;
-  const range = max - min;
-  const step = innerW / (months.length - 1);
+export function RevenueChart({ snapshot, range, onRangeChange }: RevenueChartProps) {
+  const rows = snapshot.comparison.selectedRows;
+  const data = rows.map((row) => ({
+    month: row.monthShort.toUpperCase(),
+    monthLabel: row.monthLabel,
+    revenue: row.revenue,
+    newCustomers: row.newCustomers,
+  }));
 
-  const toPath = (data: number[]) =>
-    data
-      .map((v, i) => {
-        const x = padX + i * step;
-        const y = padY + innerH - ((v - min) / range) * innerH;
-        return `${i === 0 ? "M" : "L"}${x},${y}`;
-      })
-      .join(" ");
-
-  const toArea = (data: number[]) => {
-    const line = toPath(data);
-    return `${line} L${padX + innerW},${padY + innerH} L${padX},${padY + innerH} Z`;
-  };
-
-  // Highlight October (index 9)
-  const hi = 9;
-  const hx = padX + hi * step;
-  const hy = padY + innerH - ((revenue[hi] - min) / range) * innerH;
+  const lastPoint = data.at(-1);
+  const customerPeak = rows.reduce(
+    (best, row) => (row.newCustomers > best.newCustomers ? row : best),
+    rows[0],
+  );
+  const periodRevenue = rows.reduce((total, row) => total + row.revenue, 0);
+  const periodCustomers = rows.reduce((total, row) => total + row.newCustomers, 0);
 
   return (
-    <div className="card-surface p-6">
+    <div className="card-surface p-6 animate-rise">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Revenue vs Profit Trend</h2>
+            <h2 className="text-lg font-semibold">Динамика выручки и новых клиентов</h2>
             <span className="rounded-full border border-border bg-card-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
               CSV
             </span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Monthly performance from CSV source</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Лаймовая линия — выручка по левой оси, фиолетовая — новые клиенты по правой оси.
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              Revenue
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-secondary" />
-              Profit
-            </span>
+        <div className="flex rounded-full border border-border bg-card-elevated p-1">
+          {periods.map((period) => {
+            const active = period.key === range;
+            return (
+              <button
+                key={period.key}
+                onClick={() => onRangeChange(period.key)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {period.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <LegendItem color="var(--color-primary)" label="Выручка" axis="левая ось" />
+        <LegendItem color="var(--color-secondary)" label="Новые клиенты" axis="правая ось" />
+        <span className="rounded-full border border-border bg-card-elevated/55 px-3 py-1.5 text-xs text-muted-foreground">
+          {snapshot.comparison.selectedLabel}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card-elevated/50 px-4 py-3">
+          <div className="label-xs">Выручка за период</div>
+          <div className="mt-1 num-display text-xl text-foreground">
+            {formatMetricValue("currency", periodRevenue, { compact: true })}
           </div>
-          <div className="flex rounded-full border border-border bg-card-elevated p-1">
-            {periods.map((p) => {
-              const active = p === "12M";
-              return (
-                <button
-                  key={p}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                    active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            })}
+        </div>
+        <div className="rounded-2xl border border-border bg-card-elevated/50 px-4 py-3">
+          <div className="label-xs">Новые клиенты за период</div>
+          <div className="mt-1 num-display text-xl text-foreground">
+            {formatMetricValue("count", periodCustomers)}
           </div>
         </div>
       </div>
 
-      <div className="mt-6 -mx-2">
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 280 }}>
-          <defs>
-            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="profGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="var(--color-secondary)" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-
-          {/* grid */}
-          {[0, 0.25, 0.5, 0.75, 1].map((p) => (
-            <line
-              key={p}
-              x1={padX}
-              x2={padX + innerW}
-              y1={padY + innerH * p}
-              y2={padY + innerH * p}
-              stroke="var(--color-border)"
-              strokeDasharray="3 4"
-            />
-          ))}
-
-          {/* areas */}
-          <path d={toArea(revenue)} fill="url(#revGrad)" />
-          <path d={toArea(profit)} fill="url(#profGrad)" />
-
-          {/* lines */}
-          <path d={toPath(profit)} fill="none" stroke="var(--color-secondary)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
-          <path
-            d={toPath(revenue)}
-            fill="none"
-            stroke="var(--color-primary)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0 2px 6px var(--primary-glow))" }}
-          />
-
-          {/* highlight */}
-          <line x1={hx} x2={hx} y1={padY} y2={padY + innerH} stroke="var(--color-primary)" strokeOpacity="0.3" strokeDasharray="3 4" />
-          <circle cx={hx} cy={hy} r="6" fill="var(--color-background)" stroke="var(--color-primary)" strokeWidth="2.5" />
-
-          {/* labels */}
-          {months.map((m, i) => (
-            <text
-              key={m}
-              x={padX + i * step}
-              y={h - 4}
-              textAnchor="middle"
-              fontSize="10"
-              fill="var(--color-muted-foreground)"
-            >
-              {m}
-            </text>
-          ))}
-
-          {/* tooltip */}
-          <g transform={`translate(${hx + 10}, ${hy - 46})`}>
-            <rect width="118" height="42" rx="10" fill="var(--color-card-elevated)" stroke="var(--color-border-strong)" />
-            <text x="10" y="16" fontSize="9.5" fill="var(--color-muted-foreground)" style={{ letterSpacing: "0.1em" }}>OCT 2024</text>
-            <text x="10" y="32" fontSize="13" fill="var(--color-foreground)" fontWeight="600">$219K</text>
-            <text x="68" y="32" fontSize="11" fill="var(--color-primary)" fontWeight="600">+5.3%</text>
-          </g>
-        </svg>
+      <div className="mt-6 h-[340px]">
+        <ChartContainer
+          className="h-full w-full"
+          config={{
+            revenue: { label: "Выручка", color: "var(--color-primary)" },
+            newCustomers: { label: "Новые клиенты", color: "var(--color-secondary)" },
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={data} margin={{ top: 12, right: 12, left: -6, bottom: 6 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 4" />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              />
+              <YAxis
+                yAxisId="left"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+                tickFormatter={(value) => formatMetricValue("currency", value, { compact: true })}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+                tickFormatter={(value) => formatMetricValue("count", value)}
+              />
+              <Tooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value, name) => (
+                      <div className="flex w-full items-center justify-between gap-6">
+                        <span className="text-muted-foreground">
+                          {name === "revenue" ? "Выручка" : "Новые клиенты"}
+                        </span>
+                        <span className="font-mono font-medium text-foreground">
+                          {name === "revenue"
+                            ? formatMetricValue("currency", Number(value), { compact: true })
+                            : formatMetricValue("count", Number(value))}
+                        </span>
+                      </div>
+                    )}
+                    labelFormatter={(label, payload) => payload?.[0]?.payload?.monthLabel ?? label}
+                  />
+                }
+              />
+              <Area
+                yAxisId="left"
+                type="monotone"
+                dataKey="revenue"
+                stroke="var(--color-primary)"
+                fill="var(--color-primary)"
+                fillOpacity={0.18}
+                strokeWidth={2.8}
+                animationDuration={950}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="newCustomers"
+                stroke="var(--color-secondary)"
+                strokeWidth={2.4}
+                dot={{ r: 3.5, fill: "var(--color-secondary)", strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+                animationDuration={1050}
+              />
+              {lastPoint ? (
+                <ReferenceDot
+                  yAxisId="left"
+                  x={lastPoint.month}
+                  y={lastPoint.revenue}
+                  r={6}
+                  fill="var(--color-background)"
+                  stroke="var(--color-primary)"
+                  strokeWidth={2.5}
+                />
+              ) : null}
+            </ComposedChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </div>
 
       <div className="mt-4 flex items-start gap-3 rounded-2xl border border-border bg-card-elevated/60 p-3">
@@ -156,9 +203,10 @@ export function RevenueChart() {
           <TrendingUp className="h-3.5 w-3.5" />
         </div>
         <p className="text-sm text-muted-foreground">
-          Revenue increased over the selected period, but profit margin weakened in the last quarter.
+          Пик притока новых клиентов пришелся на {customerPeak.monthLabel}, а последняя точка
+          периода закрылась выручкой{" "}
+          {lastPoint ? formatMetricValue("currency", lastPoint.revenue, { compact: true }) : "—"}.
         </p>
-        <Info className="ml-auto h-4 w-4 shrink-0 text-muted-foreground/60" />
       </div>
     </div>
   );
