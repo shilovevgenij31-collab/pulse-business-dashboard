@@ -138,6 +138,20 @@ function ContextTile({
   );
 }
 
+function formatProviderNotice(message: string) {
+  const compact = message.replace(/\s+/g, " ").trim();
+
+  if (compact.startsWith("OpenRouter временно не вернул пригодный ответ.")) {
+    return "OpenRouter временно не вернул пригодный ответ. Показан локальный fallback по рассчитанным метрикам.";
+  }
+
+  if (compact.startsWith("OpenRouter вернул ошибку:")) {
+    return compact.length > 220 ? `${compact.slice(0, 220)}...` : compact;
+  }
+
+  return compact.length > 220 ? `${compact.slice(0, 220)}...` : compact;
+}
+
 export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
   const fallbackInsight = useMemo(() => buildFallbackInsight(snapshot), [snapshot]);
   const promptPayload = useMemo(() => buildInsightPromptPayload(snapshot), [snapshot]);
@@ -169,7 +183,7 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
           ? error.message
           : "AI-инсайт не удалось сгенерировать.";
 
-      setProviderNotice(message);
+      setProviderNotice(formatProviderNotice(message));
       setInsight({
         ...fallbackInsight,
         model: "Локальный fallback",
@@ -270,7 +284,10 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
         <div className="mt-4 flex flex-1 flex-col gap-4">
           {providerNotice ? (
             <div className="rounded-2xl border border-warning/35 bg-warning/10 p-4 text-sm text-warning">
-              OpenRouter сейчас недоступен. Показан локальный вывод. Детали: {providerNotice}
+              <div className="font-medium">
+                OpenRouter сейчас недоступен. Показан локальный вывод.
+              </div>
+              <div className="mt-2 break-words text-warning/90">{providerNotice}</div>
             </div>
           ) : null}
 
