@@ -142,6 +142,41 @@ function ContextTile({
   );
 }
 
+function CompactContext({
+  periodLabel,
+  compareLabel,
+  latestMonthLabel,
+  latestMonthRevenue,
+  primarySignalTitle,
+}: {
+  periodLabel: string;
+  compareLabel: string;
+  latestMonthLabel: string;
+  latestMonthRevenue: string;
+  primarySignalTitle: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border-strong bg-background/45 p-4">
+      <div className="label-xs">Контекст для решения</div>
+      <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+        <p>
+          <span className="font-medium text-foreground">Период:</span> {periodLabel}
+        </p>
+        <p>
+          <span className="font-medium text-foreground">Сравнение:</span> {compareLabel}
+        </p>
+        <p>
+          <span className="font-medium text-foreground">Последний месяц:</span> {latestMonthLabel},{" "}
+          {latestMonthRevenue}
+        </p>
+        <p>
+          <span className="font-medium text-foreground">Главный сигнал:</span> {primarySignalTitle}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function formatProviderNotice(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
 
@@ -327,37 +362,51 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
             />
           ) : null}
 
-          <div className="min-h-0 flex-1">
-            <div className="flex h-full flex-col rounded-2xl border border-border-strong bg-background/45 p-4">
-              <div className="label-xs">Контекст для решения</div>
-              <div className="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-3 sm:grid-cols-2">
-                <ContextTile
-                  label="Период"
-                  title={snapshot.comparison.selectedLabel}
-                  description={compareLabel}
-                />
-                <ContextTile
-                  label="Последний месяц"
-                  title={latestMonth?.monthLabel ?? "Нет данных"}
-                  description={
-                    latestMonth
-                      ? `Выручка ${formatMetricValue("currency", latestMonth.revenue, { compact: true })}`
-                      : "Нет данных для последней точки."
-                  }
-                />
-                <ContextTile
-                  label="Главный сигнал"
-                  title={primarySignal?.title ?? "Сильных рисков нет"}
-                  description={primarySignalShort}
-                />
-                <ContextTile
-                  label="Что смотреть"
-                  title="Качество роста"
-                  description="Сверьте CAC, маржу и отток с динамикой выручки и новых клиентов."
-                />
+          {providerNotice ? (
+            <CompactContext
+              periodLabel={snapshot.comparison.selectedLabel}
+              compareLabel={compareLabel}
+              latestMonthLabel={latestMonth?.monthLabel ?? "Нет данных"}
+              latestMonthRevenue={
+                latestMonth
+                  ? `выручка ${formatMetricValue("currency", latestMonth.revenue, { compact: true })}`
+                  : "нет данных"
+              }
+              primarySignalTitle={primarySignal?.title ?? "Сильных рисков нет"}
+            />
+          ) : (
+            <div className="min-h-0 flex-1">
+              <div className="flex h-full flex-col rounded-2xl border border-border-strong bg-background/45 p-4">
+                <div className="label-xs">Контекст для решения</div>
+                <div className="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-3 sm:grid-cols-2">
+                  <ContextTile
+                    label="Период"
+                    title={snapshot.comparison.selectedLabel}
+                    description={compareLabel}
+                  />
+                  <ContextTile
+                    label="Последний месяц"
+                    title={latestMonth?.monthLabel ?? "Нет данных"}
+                    description={
+                      latestMonth
+                        ? `Выручка ${formatMetricValue("currency", latestMonth.revenue, { compact: true })}`
+                        : "Нет данных для последней точки."
+                    }
+                  />
+                  <ContextTile
+                    label="Главный сигнал"
+                    title={primarySignal?.title ?? "Сильных рисков нет"}
+                    description={primarySignalShort}
+                  />
+                  <ContextTile
+                    label="Что смотреть"
+                    title="Качество роста"
+                    description="Сверьте CAC, маржу и отток с динамикой выручки и новых клиентов."
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
