@@ -100,7 +100,7 @@ function InsightResult({
       <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{insight.model}</span>
         <span>·</span>
-        <span>{insight.caveat}</span>
+        <span className="line-clamp-2">{insight.caveat}</span>
       </div>
     </div>
   );
@@ -128,12 +128,16 @@ function ContextTile({
   description: string;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-border bg-card-elevated/55 p-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card-elevated/55 p-3">
       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold leading-snug text-foreground">{title}</div>
-      <div className="mt-1 text-xs leading-snug text-muted-foreground">{description}</div>
+      <div className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+        {title}
+      </div>
+      <div className="mt-1 line-clamp-3 text-xs leading-snug text-muted-foreground">
+        {description}
+      </div>
     </div>
   );
 }
@@ -287,7 +291,7 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
               <div className="font-medium">
                 OpenRouter сейчас недоступен. Показан локальный вывод.
               </div>
-              <div className="mt-2 break-words text-warning/90">{providerNotice}</div>
+              <div className="mt-2 line-clamp-3 break-words text-warning/90">{providerNotice}</div>
             </div>
           ) : null}
 
