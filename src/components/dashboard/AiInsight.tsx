@@ -235,7 +235,7 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
       />
       <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
 
-      <div className="relative flex h-full flex-col">
+      <div className="relative flex h-full min-h-0 flex-col">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary to-primary text-background">
@@ -285,7 +285,7 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
           ))}
         </div>
 
-        <div className="mt-4 flex flex-1 flex-col gap-4">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
           {providerNotice ? (
             <div className="rounded-2xl border border-warning/35 bg-warning/10 p-4 text-sm text-warning">
               <div className="font-medium">
@@ -327,10 +327,10 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
             />
           ) : null}
 
-          <div className="flex-1">
+          <div className="min-h-0 flex-1">
             <div className="flex h-full flex-col rounded-2xl border border-border-strong bg-background/45 p-4">
               <div className="label-xs">Контекст для решения</div>
-              <div className="mt-3 grid flex-1 auto-rows-fr gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid min-h-0 flex-1 auto-rows-fr gap-3 sm:grid-cols-2">
                 <ContextTile
                   label="Период"
                   title={snapshot.comparison.selectedLabel}
