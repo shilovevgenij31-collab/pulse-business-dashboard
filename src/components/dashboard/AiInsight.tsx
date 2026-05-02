@@ -162,10 +162,12 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
       });
 
       setInsight(response);
-    } catch {
+    } catch (error) {
       setInsight(null);
       setErrorMessage(
-        "AI-инсайт не удалось сгенерировать. Проверьте OPENROUTER_API_KEY и серверные логи.",
+        error instanceof Error && error.message
+          ? error.message
+          : "AI-инсайт не удалось сгенерировать.",
       );
     } finally {
       setIsLoading(false);
