@@ -86,22 +86,24 @@ export function TopNav({
       ref={headerRef}
       className="sticky top-0 z-30 border-b border-border bg-background/72 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60"
     >
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-1.5 px-6 py-2">
-        <div className="flex min-w-0 flex-col gap-1.5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground animate-glow-pulse">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-2 sm:px-5 lg:px-6">
+        <div className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground animate-glow-pulse sm:h-9 sm:w-9">
               <Activity className="h-4 w-4" strokeWidth={2.5} />
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-secondary ring-2 ring-background" />
             </div>
             <div className="min-w-0 leading-none">
-              <span className="block truncate text-sm font-semibold tracking-tight">
+              <span className="block truncate text-[13px] font-semibold tracking-tight sm:text-sm">
                 Пульс бизнеса
               </span>
-              <span className="label-xs mt-0.5 block text-[9px]">Дашборд портфельной компании</span>
+              <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[10px]">
+                Дашборд портфельной компании
+              </span>
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-col gap-1.5 2xl:flex-row 2xl:items-center 2xl:justify-end">
+          <div className="flex min-w-0 flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-end">
             <nav className="hidden items-center gap-1 self-end rounded-full border border-border bg-card/60 p-1 md:flex 2xl:self-auto">
               {tabs.map((tab, index) => (
                 <button
@@ -115,8 +117,8 @@ export function TopNav({
               ))}
             </nav>
 
-            <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-1.5 xl:w-auto xl:flex-nowrap">
-              <div className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card-elevated/50 px-3 text-xs text-muted-foreground">
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-2xl border border-border bg-card/60 p-1.5 sm:flex sm:flex-wrap sm:items-center xl:w-auto xl:flex-nowrap">
+              <div className="hidden h-9 items-center gap-2 rounded-xl border border-border bg-card-elevated/50 px-3 text-xs text-muted-foreground sm:inline-flex sm:h-10">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 <span>{loading ? "Обновляем..." : "Фильтры периода"}</span>
               </div>
@@ -125,14 +127,15 @@ export function TopNav({
                 type="button"
                 title={datasetLabel}
                 onClick={onOpenDatasetManager}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card-elevated/50 px-3.5 text-xs font-medium text-foreground transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-elevated hover:shadow-[0_0_24px_-10px_var(--primary-glow)]"
+                className="inline-flex h-9 min-w-0 items-center gap-2 rounded-xl border border-border bg-card-elevated/50 px-3 text-xs font-medium text-foreground transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card-elevated hover:shadow-[0_0_24px_-10px_var(--primary-glow)] sm:h-10 sm:px-3.5"
               >
                 <Database className="h-3.5 w-3.5 text-primary" />
-                <span>Наборы данных</span>
+                <span className="truncate sm:hidden">Наборы</span>
+                <span className="hidden sm:inline">Наборы данных</span>
               </button>
 
               <Select value={range} onValueChange={(value) => onRangeChange(value as RangeKey)}>
-                <SelectTrigger className="h-10 w-[148px] rounded-xl border-border bg-card-elevated/60 text-foreground">
+                <SelectTrigger className="h-9 w-full min-w-0 rounded-xl border-border bg-card-elevated/60 text-foreground sm:h-10 sm:w-[148px]">
                   <SelectValue placeholder="Период" />
                 </SelectTrigger>
                 <SelectContent>
@@ -148,7 +151,7 @@ export function TopNav({
                 value={compare}
                 onValueChange={(value) => onCompareChange(value as CompareMode)}
               >
-                <SelectTrigger className="h-10 min-w-[220px] flex-1 rounded-xl border-border bg-card-elevated/60 text-foreground xl:w-[300px] xl:flex-none">
+                <SelectTrigger className="col-span-2 h-9 min-w-0 rounded-xl border-border bg-card-elevated/60 text-foreground sm:h-10 sm:min-w-[220px] sm:flex-1 xl:w-[300px] xl:flex-none">
                   <SelectValue placeholder="Сравнение" />
                 </SelectTrigger>
                 <SelectContent>
