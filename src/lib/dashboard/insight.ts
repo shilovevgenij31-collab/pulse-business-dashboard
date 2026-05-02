@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { formatDeltaValue, formatMetricValue, formatSignedMetricValue } from "./format";
 import type { DashboardSnapshot } from "./types";
 
-const DEFAULT_MODEL = "baidu/qianfan-ocr-fast-20260420:free";
+const DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free";
 
 const insightResponseSchema = z.object({
   summary: z.string(),
@@ -204,11 +204,7 @@ export const generateExecutiveInsight = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model,
         temperature: 0.2,
-        max_completion_tokens: 260,
-        reasoning: {
-          effort: "none",
-          exclude: true,
-        },
+        max_tokens: 260,
         messages: [
           { role: "system", content: prompt.system },
           { role: "user", content: prompt.user },
