@@ -50,6 +50,7 @@ function InsightRows({ insight }: { insight: InsightResponse }) {
     <div className="mt-4 grid gap-2.5">
       {rows.map((row) => {
         const Icon = row.icon;
+
         return (
           <div
             key={row.label}
@@ -142,17 +143,17 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
   const promptPayload = useMemo(() => buildInsightPromptPayload(snapshot), [snapshot]);
   const generateInsight = useServerFn(generateExecutiveInsight);
   const [insight, setInsight] = useState<InsightResponse | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setInsight(null);
-    setErrorMessage(null);
+    setProviderNotice(null);
   }, [snapshot.generatedAt, snapshot.filters.range, snapshot.filters.compare]);
 
   async function handleGenerateInsight() {
     setIsLoading(true);
-    setErrorMessage(null);
+    setProviderNotice(null);
 
     try {
       const response = await generateInsight({
@@ -163,12 +164,17 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
 
       setInsight(response);
     } catch (error) {
-      setInsight(null);
-      setErrorMessage(
+      const message =
         error instanceof Error && error.message
           ? error.message
-          : "AI-инсайт не удалось сгенерировать.",
-      );
+          : "AI-инсайт не удалось сгенерировать.";
+
+      setProviderNotice(message);
+      setInsight({
+        ...fallbackInsight,
+        model: "Локальный fallback",
+        caveat: "OpenRouter временно недоступен. Показан локальный вывод по рассчитанным метрикам.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -261,8 +267,14 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
           ))}
         </div>
 
-        <div className="mt-4 flex flex-1 flex-col">
-          {!insight && !errorMessage && !isLoading ? (
+        <div className="mt-4 flex flex-1 flex-col gap-4">
+          {providerNotice ? (
+            <div className="rounded-2xl border border-warning/35 bg-warning/10 p-4 text-sm text-warning">
+              OpenRouter сейчас недоступен. Показан локальный вывод. Детали: {providerNotice}
+            </div>
+          ) : null}
+
+          {!insight && !providerNotice && !isLoading ? (
             <InsightResult
               insight={fallbackInsight}
               badge="Предварительный rule-based insight"
@@ -285,25 +297,16 @@ export function AiInsight({ snapshot }: { snapshot: DashboardSnapshot }) {
           {insight ? (
             <InsightResult
               insight={insight}
-              badge="Результат OpenRouter"
-              badgeTone="border-secondary/40 bg-secondary/10 text-accent"
+              badge={providerNotice ? "Локальный fallback" : "Результат OpenRouter"}
+              badgeTone={
+                providerNotice
+                  ? "border-warning/40 bg-warning/10 text-warning"
+                  : "border-secondary/40 bg-secondary/10 text-accent"
+              }
             />
           ) : null}
 
-          {errorMessage ? (
-            <div className="grid gap-4">
-              <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-                {errorMessage}
-              </div>
-              <InsightResult
-                insight={fallbackInsight}
-                badge="Предварительный rule-based insight"
-                badgeTone="border-warning/40 bg-warning/10 text-warning"
-              />
-            </div>
-          ) : null}
-
-          <div className="mt-4 flex-1">
+          <div className="flex-1">
             <div className="flex h-full flex-col rounded-2xl border border-border-strong bg-background/45 p-4">
               <div className="label-xs">Контекст для решения</div>
               <div className="mt-3 grid flex-1 auto-rows-fr gap-3 sm:grid-cols-2">

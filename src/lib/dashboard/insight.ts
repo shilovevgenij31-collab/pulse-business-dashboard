@@ -1,9 +1,13 @@
-import { z } from "zod";
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { formatDeltaValue, formatMetricValue, formatSignedMetricValue } from "./format";
 import type { DashboardSnapshot } from "./types";
 
 const DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const FALLBACK_MODELS = [
+  "meta-llama/llama-3.3-8b-instruct:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+];
 
 const insightResponseSchema = z.object({
   summary: z.string(),
@@ -55,10 +59,17 @@ export type InsightPromptPayload = z.infer<typeof insightPromptPayloadSchema>;
 
 function resolveOpenRouterSettings() {
   const env = typeof process !== "undefined" ? process.env : undefined;
-  const apiKey = env?.OPENROUTER_API_KEY;
-  const model = env?.OPENROUTER_MODEL || DEFAULT_MODEL;
 
-  return { apiKey, model };
+  return {
+    apiKey: env?.OPENROUTER_API_KEY,
+    model: env?.OPENROUTER_MODEL || DEFAULT_MODEL,
+  };
+}
+
+function buildModelCandidates(model: string) {
+  return [model, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(
+    (candidate, index, list) => Boolean(candidate) && list.indexOf(candidate) === index,
+  );
 }
 
 export function buildInsightPromptPayload(snapshot: DashboardSnapshot): InsightPromptPayload {
@@ -133,27 +144,18 @@ function parseInsightContent(content: string, model: string): InsightResponse {
       ?.slice(prefix.length)
       .trim() || fallback;
 
-  const summary = pick("Короткий вывод:", content.trim());
-  const whatChanged = pick(
-    "Что изменилось:",
-    "Модель вернула общий ответ без отдельной строки про изменения.",
-  );
-  const whatLooksRisky = pick("Что настораживает:", "Модель не выделила отдельный блок рисков.");
-  const whatToCheckFirst = pick(
-    "Что проверить первым:",
-    "Модель не указала первый приоритет для проверки.",
-  );
-  const caveat = pick(
-    "Ограничение:",
-    "Используйте вывод только как первый проход по имеющимся данным.",
-  );
-
   return insightResponseSchema.parse({
-    summary,
-    whatChanged,
-    whatLooksRisky,
-    whatToCheckFirst,
-    caveat,
+    summary: pick("Короткий вывод:", content.trim()),
+    whatChanged: pick(
+      "Что изменилось:",
+      "Модель вернула общий ответ без отдельной строки про изменения.",
+    ),
+    whatLooksRisky: pick("Что настораживает:", "Модель не выделила отдельный блок рисков."),
+    whatToCheckFirst: pick(
+      "Что проверить первым:",
+      "Модель не указала первый приоритет для проверки.",
+    ),
+    caveat: pick("Ограничение:", "Используйте вывод только как первый проход по имеющимся данным."),
     model,
     generatedAt: new Date().toISOString(),
   });
@@ -195,51 +197,63 @@ export const generateExecutiveInsight = createServerFn({ method: "POST" })
     }
 
     const prompt = buildPrompt(data.payload);
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        max_tokens: 260,
-        messages: [
-          { role: "system", content: prompt.system },
-          { role: "user", content: prompt.user },
-        ],
-      }),
-    });
+    const attempts: string[] = [];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `OpenRouter вернул ошибку: ${response.status} ${response.statusText} - ${errorText}`,
-      );
+    for (const candidateModel of buildModelCandidates(model)) {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: candidateModel,
+          temperature: 0.2,
+          max_tokens: 260,
+          messages: [
+            { role: "system", content: prompt.system },
+            { role: "user", content: prompt.user },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const message = `${candidateModel}: ${response.status} ${response.statusText} - ${errorText}`;
+        attempts.push(message);
+
+        if (response.status === 401 || response.status === 403 || response.status === 429) {
+          throw new Error(`OpenRouter вернул ошибку: ${message}`);
+        }
+
+        continue;
+      }
+
+      const payload = (await response.json()) as {
+        model?: string;
+        choices?: Array<{
+          message?: {
+            content?: string | null | Array<{ type?: string; text?: string }>;
+            reasoning?: string | null;
+          };
+        }>;
+      };
+
+      const content = extractTextContent(payload.choices?.[0]?.message ?? {});
+
+      if (!content) {
+        attempts.push(`${candidateModel}: empty-content`);
+        continue;
+      }
+
+      try {
+        return parseInsightContent(content, payload.model || candidateModel);
+      } catch {
+        attempts.push(`${candidateModel}: parse-failed`);
+      }
     }
 
-    const payload = (await response.json()) as {
-      model?: string;
-      choices?: Array<{
-        message?: {
-          content?: string | null | Array<{ type?: string; text?: string }>;
-          reasoning?: string | null;
-        };
-      }>;
-    };
-
-    const content = extractTextContent(payload.choices?.[0]?.message ?? {});
-
-    if (!content) {
-      throw new Error("OpenRouter не вернул пригодный текст для AI-инсайта.");
-    }
-
-    try {
-      return parseInsightContent(content, payload.model || model);
-    } catch {
-      throw new Error("Ответ OpenRouter не удалось корректно разобрать.");
-    }
+    throw new Error(`OpenRouter временно не вернул пригодный ответ. ${attempts.join(" | ")}`);
   });
 
 export function buildFallbackInsight(snapshot: DashboardSnapshot) {
